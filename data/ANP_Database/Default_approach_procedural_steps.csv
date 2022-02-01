@@ -1,0 +1,12 @@
+ACFT_ID;Profile_ID;Step Number;Step Type;Flap_ID;Start Altitude(ft);Start CAS (kt);Descent Angle (deg);Touchdown Roll (ft);Distance (ft);Start Thrust
+A320-211;DEFAULT;1;Descend-Idle;;6000.0;250.0;3.5;;;
+A320-211;DEFAULT;2;Level-Idle;;3000.0;250.0;;;16811.0;
+A320-211;DEFAULT;3;Level-Idle;;3000.0;201.1;;;5547.9;
+A320-211;DEFAULT;4;Descend-Idle;;3000.0;182.2;3.0;;;
+A320-211;DEFAULT;5;Descend-Idle;;2614.0;173.7;3.0;;;
+A320-211;DEFAULT;6;Descend-Idle;;1942.0;141.0;3.0;;;
+A320-211;DEFAULT;7;Descend;FULL_D;1823.0;132.6;3.0;;;
+A320-211;DEFAULT;8;Descend;FULL_D;50.0;132.6;3.0;;;
+A320-211;DEFAULT;9;Land;FULL_D;;;;303.5;;
+A320-211;DEFAULT;10;Decelerate;;;129.6;;;2731.6;40.0
+A320-211;DEFAULT;11;Decelerate;;;30.0;;;0;10.0

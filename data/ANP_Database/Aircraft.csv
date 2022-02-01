@@ -1,0 +1,2 @@
+ACFT_ID;Description;Engine Type;Number Of Engines;Weight Class;Owner Category;Max Gross Takeoff Weight (lb);Max Gross Landing Weight (lb);Max Landing Distance (ft);Max Sea Level Static Thrust (lb);Noise Chapter;NPD_ID;Power Parameter;Approach Spectral Class ID;Departure Spectral Class ID;Lateral Directivity Identifier
+A320-211;Airbus A320-211 / CFM56-5A1;Jet;2;Large;Commercial;169756;142198;4753;25000;3;CFM565;CNT (lb);202;103;Wing

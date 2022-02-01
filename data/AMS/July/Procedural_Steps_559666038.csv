@@ -1,0 +1,11 @@
+Step Type,Thrust Rating,Flap_ID,End Point Altitude (ft),End Point CAS (kt),Rate Of Climb (ft/min),Weight (lbs),Tflex (C)
+TakeOff,MaxTakeoff,1+F,,,,142596.96517822277,30.865963931662208
+Climb,MaxTakeoff,1+F,1747.348278587568,,,,
+Accelerate,MaxTakeoff,1+F,,161.81002753710115,1558.7306798075408,,
+Accelerate,MaxTakeoff,1+F,,204.35326621313726,1174.5049238271952,,
+Accelerate,MaxClimb,1+F,,221.67062793840108,3722.657301136163,,
+Climb,MaxClimb,1+F,5454.7539161954155,,,,
+Climb,MaxClimb,ZERO,6928.3741295657255,,,,
+Accelerate,MaxClimb,ZERO,,257.3531098968135,1605.4336211933214,,
+Accelerate,MaxClimb,ZERO,,274.06764883049414,2444.5787276223846,,
+Climb,MaxClimb,1+F,10108.341066169804,,,,
