@@ -1,6 +1,6 @@
 import numpy as np
 import pdb
-def pressure_ratio_(Alt, Papt):
+def pressure_ratio_(Alt_agb, Papt, Eapt):
     # Papt [inHg], pressure at airport 
     # Alt [ft], aircraft altitude above airport
     
@@ -11,9 +11,10 @@ def pressure_ratio_(Alt, Papt):
     P0 = 29.92 #inHg pressure at std mean sea level
     gBR = np.round(g/B/R, 4)
     
+    Alt_msl = Alt_agb + Eapt
+	
     np.seterr('raise')
-    delta = ((Papt / P0)**(1/gBR) - (B * Alt / T0))**gBR
-
+    delta = ((Papt / P0)**(1/gBR) - (B * Alt_msl / T0))**gBR
     return delta
 
 def temperature_ratio_(Alt, Tapt):
@@ -38,8 +39,8 @@ def temperature_profile(Alt, Tapt):
     T = (T - 32) * 5/9 # Conversion to celsius
     return T
 
-def pressure_altitude(Alt, Papt):
-    delta = pressure_ratio_(Alt, Papt)
+def pressure_altitude(Alt, Papt, Eapt):
+    delta = pressure_ratio_(Alt, Papt, Eapt)
     g = 32.17 #ft/s^2 gravity
     B = 0.003566 #°F/ft atmospheric lapse
     R = 1716.59 #ft*lb/(sl*°R)
@@ -48,11 +49,11 @@ def pressure_altitude(Alt, Papt):
 
     h = T0 / B * (1 - delta ** (1 / gBR))
     return h
-def air_density_ratio(Alt, Tapt, Papt):
+def air_density_ratio(Alt, Tapt, Papt, Eapt):
     # Tapt [°F], temperature at airport
     # Papt [inHg], pressure at airport 
     # Alt [ft], aircraft altitude above airport
-    delta = pressure_ratio_(Alt, Papt)
+    delta = pressure_ratio_(Alt, Papt, Eapt)
     Theta = temperature_ratio_(Alt, Tapt)
 
     sigma = delta / Theta

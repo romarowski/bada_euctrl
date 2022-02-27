@@ -56,36 +56,76 @@ def main():
 
 
     file_list = os.scandir(os.path.join(path, folder_flights))
+    pdb.set_trace()
     for flight_fn in file_list:
+            
             flight_fn = str(flight_fn.name)
             flight_id = flight_fn.split('_')[1].split('.')[0]
+            
 
             meteo_fn = 'meteo_' + flight_id + '.csv'
             #radar_fn = 'flight_'+id_+'.csv'
             radar_fn =  flight_fn
+            
+            op_type = pd.read_csv(os.path.join('input', folder_meteo,
+                meteo_fn))['op_type'].iloc[0]
 
-            craft = NoiseCraft(equip)
+
+            craft = NoiseCraft(equip, op_type)
             craft.load_meteo(folder_meteo, meteo_fn)
+            #op_type = craft.op_type
             craft.load_radar(folder_flights, radar_fn)
+            craft.correct_altitude(column_names, Eapt=craft.Eapt)
 
-            craft.clean_radar_data(column_names)
-            origin = craft.Radar.iloc[0][[column_names['Lat'], column_names['Lon']]]
+            craft.clean_radar_data(column_names, op_type = op_type)
+            if op_type == 'D':
+                origin = craft.Radar.iloc[0][[column_names['Lat'], column_names['Lon']]]
+            else:
+                origin = craft.Radar.iloc[-1][[column_names['Lat'], column_names['Lon']]]
 
             craft.lat_lon_to_m(origin.to_numpy(), column_names)
-            craft.calculate_distance()
+            craft.calculate_distance(op_type=op_type)
             craft.calculate_CAS(column_names)
+
             
             craft.load_data(column_names)
 
-            hdf = scipy.interpolate.interp1d(craft.time, craft.h)
-            rdf = scipy.interpolate.interp1d(craft.time, craft.d)
+            after_TO = False
 
-            #pdb.set_trace()
-            #y0  = 
+            mincount = 3
+            maxcount = 10
+            
+            #try: 
+            craft.segment(mincount, maxcount, wrt_to_time=True, after_TO=after_TO, 
+                    normalize = False, op_type=op_type)
+            
+            #craft.recognize_steps()
+            craft.get_mass_w_ANP_simple(op_type=op_type)
 
-            #scipy.integrate.solve_ivp
-    
-            return 0, craft
+            
+            if plot_:         
+                craft.plot_segmented()
+            
+            craft.get_R_with_BADA_segmented(column_names)
+            
+            
+            if after_TO:
+                craft.extrapolate_TO_distance()
+           #print('Steps: ' + str(craft.steps))
+            
+            #craft.new_vert_profile(column_names)
+            #craft.new_vert_profile_pinv(column_names)
+            
+            if plot_:
+                pass
+                #craft.plot_segmented()
+                #craft.plot_ANP_profile(column_names, flight_id)
+
+            #craft.map_flaps()
+            craft.thrust_FB_segmented(op_type=op_type)
+            craft.plot_FB(op_type=op_type)
+
+    return 0, craft
 
 if __name__ == '__main__':
     success, craft = main()
