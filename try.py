@@ -56,7 +56,6 @@ def main():
 
 
     file_list = os.scandir(os.path.join(path, folder_flights))
-    pdb.set_trace()
     for flight_fn in file_list:
             
             flight_fn = str(flight_fn.name)

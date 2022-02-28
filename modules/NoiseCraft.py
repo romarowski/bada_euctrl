@@ -110,7 +110,8 @@ class NoiseCraft:
             loc_max = mask_h[0] + 1
             df = df.iloc[:loc_max].reset_index(drop=True)
             mask_s = np.flatnonzero(df[column_names['GroundSpeed']] >= min_speed)
-            loc_min = mask_s[0] - look_back_speed
+            #loc_min = mask_s[0] - look_back_speed
+            loc_min = mask_s[0] 
 
             df = df.iloc[loc_min:].reset_index(drop=True)
         
@@ -246,7 +247,6 @@ class NoiseCraft:
         TAS = CAS / np.sqrt(sigmas)
         
         M = TAS / np.sqrt(k * R * temperatures)
-
         
         lbm2kgs = 0.45359237
         lbs2kgs = 1 * lbm2kgs # 1/g * lbm2kgs
@@ -421,7 +421,7 @@ class NoiseCraft:
             else:
                 vz = np.r_[vz, 0]
                 cos_climb_angle = np.r_[cos_climb_angle, 1]
-            TAS = np.sqrt(TAS**2 + vz**2)
+            #TAS = np.sqrt(TAS**2 + vz**2)
 
 
             self.climb_angle = np.arccos(cos_climb_angle)
@@ -690,23 +690,27 @@ class NoiseCraft:
             return (vec[1:] + vec[:-1]) / 2
 
         def clean_cas(cas, op_type):
-            cas_avg = mid_values(cas)
             if op_type == 'D':
-                for i, _ in enumerate(np.diff(cas)):
-                    if np.diff(cas)[i] < 0:
-                        cas[i] = cas_avg[i]
-                        cas[i+1] = cas_avg[i]
+                while any(np.diff(cas)<0):
+                    for i, _ in enumerate(np.diff(cas)):
+                        cas_avg = mid_values(cas)
+                        if np.diff(cas)[i] < 0:
+                            cas[i] = cas_avg[i]
+                            cas[i+1] = cas_avg[i]
             else:
-                for i, _ in enumerate(np.diff(cas)):
-                    if np.diff(cas)[i] > 0:
-                        cas[i] = cas_avg[i]
-                        cas[i+1] = cas_avg[i]
+                while any(np.diff(cas)>0):
+                    for i, _ in enumerate(np.diff(cas)):
+                        cas_avg = mid_values(cas)
+                        if np.diff(cas)[i] > 0:
+                            cas[i] = cas_avg[i]
+                            cas[i+1] = cas_avg[i]
 
             return cas
         
-        pcas = clean_cas(pcas, op_type=op_type)
+        pcas = clean_cas(np.round(pcas), op_type=op_type)
 
-        py[py<1e-1] = 0
+        py = np.round(py)
+        py[py<0] = 0
         
         self.d_seg = px
         self.h_seg = py
@@ -1455,6 +1459,7 @@ class NoiseCraft:
         Papt = self.Papt_given
 
         cas = np.copy(self.cas_seg)
+        d   = self.d_seg
         #cas = clean_cas(cas)
 
         h = self.h_seg #get rid of 1st points on ground
@@ -1465,35 +1470,40 @@ class NoiseCraft:
         #d = self.d_seg[1:]
         #cas = cas[1:]
 
-        h[h<0] = 0
-
+        #h[h<0] = 0
+        
+        sigmas = air_density_ratio(h, Tapt, Papt, self.Eapt)
+        tas    = np.multiply(cas, 1/(np.sqrt(sigmas)))
+        
+          
+        
         #if up_sample:
         #    d = self.d[self.h>0]
         #    times = np.interp(d, self.d_seg[1:], times)
         #    h     = np.interp(d, self.d_seg[1:], h)
         #    cas   = np.interp(d, self.d_seg[1:], cas)
-        if up_sample:
-            #d = self.d[self.h>0]
-            d  = self.d
-            times = np.interp(d, self.d_seg, times)
-            h     = np.interp(d, self.d_seg, h)
-            cas   = np.interp(d, self.d_seg, cas)
+        #if up_sample:
+        #    #d = self.d[self.h>0]
+        #    d  = self.d
+        #    times = np.interp(d, self.d_seg, times)
+        #    h     = np.interp(d, self.d_seg, h)
+        #    cas   = np.interp(d, self.d_seg, cas)
            
 
         
-        sigmas = air_density_ratio(h, Tapt, Papt, self.Eapt)
-        tas    = np.multiply(cas, 1/(np.sqrt(sigmas)))
         
 
         
-        P_ratio = pressure_ratio_(mid_values(h), Papt, self.Eapt)
+        #P_ratio = pressure_ratio_(mid_values(h), Papt, self.Eapt)
+        
+        
         delta_h = np.diff(h)
         delta_d = np.diff(d)
         tan_gamma = delta_h / delta_d
         gamma = np.arctan(tan_gamma)
 
-        if not up_sample:
-            tas = tas[1:] # get rid of first point in the ground
+        #if not up_sample:
+        #    tas = tas[1:] # get rid of first point in the ground
 
 
         kts2ftps = 1.68781 
@@ -1506,15 +1516,26 @@ class NoiseCraft:
         delta_time = np.diff(times)
 
         accel = delta_tas / delta_time #ft/s^2
+        
+        def extrapolate_seg_vector(y_seg, x, x_seg):
+            y = np.zeros(len(x))
+            for i in range(len((x_seg)) - 1):
+                y[(x>x_seg[i]) &(x<=x_seg[i+1])] = y_seg[i]
+            y[0] = y[1]
+            return y
+                
 
+        accel = extrapolate_seg_vector(accel, self.d, self.d_seg)
+        gamma = extrapolate_seg_vector(gamma, self.d, self.d_seg)
+        
         lbs2slug = 0.031081
         g = 32.1740 #ft/s^2
 
-        fig, ax = plt.subplots()
-        ax.plot(d, tas, 'o')
-        ax2 = ax.twinx()
-        ax2.plot(mid_values(d), accel, 'ro')
-        plt.show()
+        #fig, ax = plt.subplots()
+        #ax.plot(d, tas, 'o')
+        #ax2 = ax.twinx()
+        #ax2.plot(self.d, accel, 'ro')
+        #plt.show()
         
         
         #This is the method with ANP optimized flaps 
@@ -1535,6 +1556,7 @@ class NoiseCraft:
 
         #####################################################################
         # With BADA 
+        
         Rs_BADA  = np.squeeze(self.R_Bada) 
         if not up_sample:
             Rs_BADA  = Rs_BADA[1:]  #get rid of 1st point @ ground
@@ -1542,7 +1564,7 @@ class NoiseCraft:
         if up_sample:
             pass
             #Rs_BADA = Rs_BADA[self.h>0]
-        Rs_BADA = mid_values(Rs_BADA) #why am I averaging this?
+        #Rs_BADA = mid_values(Rs_BADA) #why am I averaging this?
 
         #window =  accel.size
         #Rs_BADA = sector_average(Rs_BADA, window)
@@ -1550,7 +1572,6 @@ class NoiseCraft:
         #kgs2slugs = 0.06852
 
         weight  = self.weight_ANP_simple
-        #weight  = 150000
         mass    = weight / g  #Conversion to slugs
 
         #gamma[1:] = gamma[1]
@@ -1560,33 +1581,57 @@ class NoiseCraft:
         k  = 1.4    #Adiabatic index of air
         mu = .02 #Kinetic friction coefficient
 
-        T_ = np.zeros(len(mid_values(self.d)))
+        
+        #T_ = np.zeros(len(mid_values(self.d)))
+        T_ = np.zeros(len(self.d))
         #Tg = np.zeros(len(self.d[self.h==0]))
-        P_ratios = self.pressure_ratios[self.h==0]
+        P_ratios = self.pressure_ratios
         Machs    = self.Mach[self.h==0]
         C_D_g    = self.C_D_Bada[self.h==0]
         C_L_g    = self.C_L_Bada[self.h==0]
 
+        ###############---CALCULATE NOISY ACCELERATION----########
+        tas_noisy  = self.Radar['TAS (kts)'].to_numpy() * kts2ftps
+        time_noisy = self.time
+        tas_noisy  = tas_noisy[self.h==0]
+        time_noisy = time_noisy[self.h==0]
+
+        accel_noisy = np.diff(tas_noisy) / np.diff(time_noisy)
+        
+        accel_noisy = np.interp(self.d[self.h==0], mid_values(self.d[self.h==0]), accel_noisy)
+
+
+        
+
         newton2lbs = 0.224809
         
-        D = .5 * P_ratios * p0 * k * self.surf_area * Machs**2 *\
+        #D = .5 * mid_values(P_ratios) * p0 * k * self.surf_area * mid_values(Machs)**2 *\
+        #        mid_values(C_D_g) * newton2lbs
+        #L = .5 * mid_values(P_ratios) * p0 * k * self.surf_area * mid_values(Machs)**2 *\
+        #        mid_values(C_L_g) * newton2lbs
+        
+        D = .5 * P_ratios[self.h==0] * p0 * k * self.surf_area * Machs**2 *\
                 C_D_g * newton2lbs
-        L = .5 * P_ratios * p0 * k * self.surf_area * Machs**2 *\
+        L = .5 * P_ratios[self.h==0] * p0 * k * self.surf_area * Machs**2 *\
                 C_L_g * newton2lbs
 
         h_mid = mid_values(self.h)
+        pdb.set_trace()
 
         if op_type == 'D':
-            T = mass * (accel + g * (Rs_BADA * np.cos(gamma) + np.sin(gamma)))
-            Tg = mass * accel[h_mid==0] + mid_values(D) + mu * (weight - mid_values(L))
+            T  = mass * (accel + g * (Rs_BADA * np.cos(gamma) + np.sin(gamma)))
+            Tg = mass * accel_noisy + D + mu * (weight - L)
             
-            T_[mid_values(self.h)==0] = Tg 
-            T_[mid_values(self.h)>0]  = T[mid_values(self.h)>0]
+            #T_[mid_values(self.h)==0] = Tg 
+            #T_[mid_values(self.h)>0]  = T[mid_values(self.h)>0]
+            
+            T_[self.h==0] = Tg 
+            T_[self.h>0]  = T[self.h>0]
 
         else:
             T = mass * (accel + g * (Rs_BADA * np.cos(gamma) - np.sin(gamma)))
 
-        self.thrust_FB_BADA_seg = T_ / 2 / mid_values(self.pressure_ratios)
+        self.thrust_FB_BADA_seg = T_ / 2 / self.pressure_ratios
 
         #Get rid of first value since equation is not valid in the ground
 
@@ -1602,7 +1647,7 @@ class NoiseCraft:
         else:
             dist = self.d
         
-        ax.plot(mid_point(dist), self.thrust_FB_BADA_seg, '-ko',
+        ax.plot(dist, self.thrust_FB_BADA_seg, '-ko',
                label='Thrust_BADA')
         
         ax.set_xlabel('Dist [ft]')
@@ -1631,6 +1676,7 @@ class NoiseCraft:
 
         ax2 = ax.twinx()
         ax2.plot(self.d_seg, self.h_seg, '-bo', label='Altitude')
+        ax2.plot(self.d, self.h, 'yo')
         ax2.set_ylabel('Alt [ft]')
         #ax2.plot(dist_def, h_def, '-ro', label='Default')
 
